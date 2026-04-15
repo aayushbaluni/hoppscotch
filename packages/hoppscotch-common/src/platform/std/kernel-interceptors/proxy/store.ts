@@ -68,7 +68,12 @@ export class KernelInterceptorProxyStore extends Service {
     watcher.on("change", async ({ value }) => {
       if (value) {
         const storedData = value as StoredData
-        this._settings.value = storedData.settings
+        this._settings.value = {
+          ...this._settings.value,
+          // Only sync user-configurable fields from external changes,
+          // keep accessToken from the current env.
+          proxyUrl: storedData.settings.proxyUrl,
+        }
       }
     })
   }
@@ -85,7 +90,10 @@ export class KernelInterceptorProxyStore extends Service {
       const storedData = loadResult.right
       this._settings.value = {
         ...defaults,
-        ...storedData.settings,
+        // Only restore user-configurable fields from storage.
+        // accessToken is env-derived (VITE_PROXYSCOTCH_ACCESS_TOKEN) and
+        // must always reflect the current deployment, not a stale persisted value.
+        proxyUrl: storedData.settings.proxyUrl ?? defaults.proxyUrl,
       }
     } else {
       this._settings.value = { ...defaults }

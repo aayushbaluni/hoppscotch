@@ -65,10 +65,10 @@ const proxyUrl = ref(store.settings$.value.proxyUrl)
 // but only if the user hasn't actively edited it to something different.
 watch(
   () => store.settings$.value.proxyUrl,
-  (storeUrl) => {
+  (storeUrl, prevStoreUrl) => {
     // Don't overwrite user edits, only sync when local still matches
     // the previous store value (i.e. user hasn't typed anything new)
-    if (proxyUrl.value === "" || proxyUrl.value === storeUrl) {
+    if (proxyUrl.value === "" || proxyUrl.value === prevStoreUrl) {
       proxyUrl.value = storeUrl
     }
   },
