@@ -552,9 +552,31 @@ export class CookieJarService extends Service {
       // host-only entry stored under a parent host cannot also apply to a
       // child-host request where a Domain-scoped cookie of the same name
       // already applies.
-      const hostOnly = !c.domain
+      let hostOnly = !c.domain
       if (c.domain) {
         domain = this.canonAttrDomain(c.domain)
+        // RFC 6265 5.3 step 5: when the single-label gate above rejects a
+        // `Domain` that is identical to the request host, the remedy the
+        // step prescribes is to let the domain-attribute be the empty
+        // string, i.e. store the cookie host-only, not to discard it.
+        // Only the identical case is recovered, so `Domain=com` from
+        // `example.com` stays rejected. This mirrors the IP-literal rule
+        // in `hostAcceptsDomain`, where a `Domain` equal to the host is
+        // already accepted and a partial suffix is not.
+        //
+        // Without it, a server on a single-label host -- `localhost`, an
+        // intranet name, a Docker service alias -- that sends
+        // `Domain=localhost` had its cookie dropped at capture, while the
+        // very same response with no `Domain` attribute was stored. The
+        // cookie then never came back on the next request and the user had
+        // to write the `Cookie` header by hand.
+        if (
+          domain === null &&
+          this.canonStoreDomain(c.domain) === requestHost
+        ) {
+          domain = this.canonHostOnly(requestHost)
+          hostOnly = true
+        }
         // RFC 6265 5.3 step 6 rejects a `Domain` attribute the
         // request host does not domain-match. Without it a response
         // from one host writes a cookie stored under another, and

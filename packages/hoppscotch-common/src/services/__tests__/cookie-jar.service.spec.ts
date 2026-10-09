@@ -411,6 +411,52 @@ describe("CookieJarService", () => {
       expect(service.cookieJar.value.size).toBe(0)
     })
 
+    it("accepts a single-label Domain attribute identical to the request host", async () => {
+      await service.extractFromResponse(
+        [{ name: "sid", value: "1", domain: "localhost" }],
+        new URL("http://localhost:3000/")
+      )
+      expect(
+        service.getCookiesForURL(new URL("http://localhost:3000/api/me"))
+      ).toHaveLength(1)
+    })
+
+    it("stores an identical single-label Domain as a host-only cookie", async () => {
+      await service.extractFromResponse(
+        [{ name: "sid", value: "1", domain: "localhost" }],
+        new URL("http://localhost:3000/")
+      )
+      expect(service.cookieJar.value.get("localhost")?.[0].hostOnly).toBe(true)
+    })
+
+    it("strips a leading dot before comparing a single-label Domain to the host", async () => {
+      await service.extractFromResponse(
+        [{ name: "sid", value: "1", domain: ".localhost" }],
+        new URL("http://localhost:3000/")
+      )
+      expect(
+        service.getCookiesForURL(new URL("http://localhost:3000/"))
+      ).toHaveLength(1)
+    })
+
+    it("does not attach an identical single-label Domain cookie to a subdomain", async () => {
+      await service.extractFromResponse(
+        [{ name: "sid", value: "1", domain: "localhost" }],
+        new URL("http://localhost:3000/")
+      )
+      expect(
+        service.getCookiesForURL(new URL("http://app.localhost:3000/"))
+      ).toHaveLength(0)
+    })
+
+    it("still rejects a single-label Domain the request host does not equal", async () => {
+      await service.extractFromResponse(
+        [{ name: "sid", value: "1", domain: "localhost" }],
+        new URL("http://127.0.0.1:3000/")
+      )
+      expect(service.cookieJar.value.size).toBe(0)
+    })
+
     it("rejects a Domain the response host does not domain-match", async () => {
       await service.extractFromResponse(
         [{ name: "sid", value: "attacker", domain: "example.com" }],
